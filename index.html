@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyTrack - Student Activity Tracker</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM (Development versions for standalone HTML) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Babel to compile React JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ICON COMPONENTS (Replacing lucide-react for standalone usage) ---
+        const IconBookOpen = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
+        const IconHome = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+        const IconLayoutList = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><path d="M14 4h7"/><path d="M14 9h7"/><path d="M14 15h7"/><path d="M14 20h7"/></svg>;
+        const IconTrophy = () => <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>;
+        const IconArrowRight = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>;
+        const IconRotateCcw = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+        const IconCheckCircle2 = () => <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>;
+        const IconCircle = () => <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>;
+
+        // --- APP DATA ---
+        const initialActivities = [
+          { id: 1, name: "HTML & CSS Basics", description: "Complete the introductory modules on semantic HTML and CSS Flexbox.", status: "Completed" },
+          { id: 2, name: "JavaScript Fundamentals", description: "Finish the exercises on variables, loops, and functions.", status: "Pending" },
+          { id: 3, name: "React Components", description: "Read the official React documentation on functional components and props.", status: "Pending" },
+          { id: 4, name: "State Management", description: "Build a simple counter app using the useState hook.", status: "Pending" },
+          { id: 5, name: "Build UI Wireframe", description: "Sketch the user interface for the final hackathon project.", status: "Pending" },
+          { id: 6, name: "Submit Project Documentation", description: "Write the Ideation & Solution document and export as PDF.", status: "Pending" }
+        ];
+
+        // --- MAIN APP COMPONENT ---
+        function App() {
+          const [currentView, setCurrentView] = useState('home');
+          
+          const [activities, setActivities] = useState(() => {
+            const savedData = localStorage.getItem('studentActivities');
+            if (savedData) {
+              try {
+                return JSON.parse(savedData);
+              } catch (e) {
+                console.error("Failed to parse local storage data", e);
+                return initialActivities;
+              }
+            }
+            return initialActivities;
+          });
+
+          useEffect(() => {
+            localStorage.setItem('studentActivities', JSON.stringify(activities));
+          }, [activities]);
+
+          const toggleActivityStatus = (id) => {
+            setActivities(prevActivities => 
+              prevActivities.map(activity => {
+                if (activity.id === id) {
+                  return {
+                    ...activity,
+                    status: activity.status === 'Pending' ? 'Completed' : 'Pending'
+                  };
+                }
+                return activity;
+              })
+            );
+          };
+
+          const resetProgress = () => {
+            if (window.confirm("Are you sure you want to reset all progress?")) {
+              setActivities(initialActivities);
+            }
+          };
+
+          const totalActivities = activities.length;
+          const completedActivities = activities.filter(a => a.status === 'Completed').length;
+          const progressPercentage = totalActivities === 0 ? 0 : Math.round((completedActivities / totalActivities) * 100);
+
+          return (
+            <div className="min-h-screen text-slate-800 font-sans">
+              {/* Navigation Header */}
+              <nav className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-10">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="flex justify-between h-16 items-center">
+                    <div 
+                      className="flex items-center gap-2 cursor-pointer" 
+                      onClick={() => setCurrentView('home')}
+                    >
+                      <div className="bg-blue-600 p-2 rounded-lg text-white">
+                        <IconBookOpen />
+                      </div>
+                      <span className="font-bold text-xl tracking-tight text-slate-900">StudyTrack</span>
+                    </div>
+
+                    <div className="flex gap-2 sm:gap-4">
+                      <button 
+                        onClick={() => setCurrentView('home')}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          currentView === 'home' 
+                            ? 'bg-blue-50 text-blue-700' 
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <IconHome />
+                        <span className="hidden sm:inline">Home</span>
+                      </button>
+                      <button 
+                        onClick={() => setCurrentView('tracker')}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          currentView === 'tracker' 
+                            ? 'bg-blue-50 text-blue-700' 
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        <IconLayoutList />
+                        <span className="hidden sm:inline">Activities</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </nav>
+
+              {/* Main Content */}
+              <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                
+                {/* --- HOME VIEW --- */}
+                {currentView === 'home' && (
+                  <div className="flex flex-col items-center justify-center text-center py-12 sm:py-20 animate-in fade-in duration-500">
+                    <div className="bg-blue-100 text-blue-600 p-4 rounded-full mb-6">
+                      <IconTrophy />
+                    </div>
+                    <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
+                      Master Your Learning Journey
+                    </h1>
+                    <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mb-10 leading-relaxed">
+                      Welcome to StudyTrack! A simple, distraction-free environment to organize your academic tasks, track your daily learning activities, and monitor your progress without the hassle of complex setups.
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                      <button 
+                        onClick={() => setCurrentView('tracker')}
+                        className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-sm hover:shadow-md"
+                      >
+                        Start Tracking Now
+                        <IconArrowRight />
+                      </button>
+                    </div>
+
+                    <div className="mt-16 grid grid-cols-2 gap-4 sm:gap-8 w-full max-w-md">
+                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p className="text-3xl font-bold text-slate-900 mb-1">{totalActivities}</p>
+                        <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Total Tasks</p>
+                      </div>
+                      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <p className="text-3xl font-bold text-blue-600 mb-1">{completedActivities}</p>
+                        <p className="text-sm text-slate-500 font-medium uppercase tracking-wider">Completed</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* --- TRACKER VIEW --- */}
+                {currentView === 'tracker' && (
+                  <div className="animate-in fade-in duration-500">
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
+                      <div>
+                        <h2 className="text-3xl font-bold text-slate-900 mb-2">My Activities</h2>
+                        <p className="text-slate-500">Track your daily assignments and learning modules.</p>
+                      </div>
+                      <button 
+                        onClick={resetProgress}
+                        className="flex items-center gap-2 text-sm text-slate-500 hover:text-red-600 transition-colors py-2 px-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-red-200 hover:bg-red-50"
+                        title="Reset all tasks to Pending"
+                      >
+                        <IconRotateCcw />
+                        <span>Reset Progress</span>
+                      </button>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+                      <div className="flex justify-between items-end mb-3">
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-800">Overall Progress</h3>
+                          <p className="text-slate-500 text-sm mt-1">
+                            <strong className="text-slate-900">{completedActivities}</strong> out of <strong className="text-slate-900">{totalActivities}</strong> activities completed
+                          </p>
+                        </div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {progressPercentage}%
+                        </div>
+                      </div>
+                      
+                      <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="bg-blue-600 h-3 rounded-full transition-all duration-700 ease-in-out" 
+                          style={{ width: `${progressPercentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {activities.map((activity) => {
+                        const isCompleted = activity.status === 'Completed';
+                        
+                        return (
+                          <div 
+                            key={activity.id} 
+                            className={`group relative flex flex-col bg-white p-5 rounded-2xl border-2 transition-all duration-200 ${
+                              isCompleted 
+                                ? 'border-green-100 bg-green-50/30' 
+                                : 'border-slate-100 hover:border-blue-100 hover:shadow-md'
+                            }`}
+                          >
+                            <div className="flex gap-4 items-start">
+                              <button 
+                                onClick={() => toggleActivityStatus(activity.id)}
+                                className={`mt-1 flex-shrink-0 focus:outline-none transition-transform active:scale-90 ${
+                                  isCompleted ? 'text-green-500' : 'text-slate-300 hover:text-blue-500'
+                                }`}
+                                aria-label={isCompleted ? "Mark as pending" : "Mark as completed"}
+                              >
+                                {isCompleted ? <IconCheckCircle2 /> : <IconCircle />}
+                              </button>
+
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <h4 className={`text-lg font-semibold transition-colors ${
+                                    isCompleted ? 'text-slate-500 line-through' : 'text-slate-900'
+                                  }`}>
+                                    {activity.name}
+                                  </h4>
+                                  
+                                  <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border whitespace-nowrap ${
+                                    isCompleted 
+                                      ? 'bg-green-100 text-green-700 border-green-200' 
+                                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                                  }`}>
+                                    {activity.status}
+                                  </span>
+                                </div>
+                                
+                                <p className={`text-sm leading-relaxed ${
+                                  isCompleted ? 'text-slate-400' : 'text-slate-600'
+                                }`}>
+                                  {activity.description}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {activities.length === 0 && (
+                      <div className="text-center py-12 text-slate-500">
+                        No activities found. Add some tasks to get started!
+                      </div>
+                    )}
+                  </div>
+                )}
+              </main>
+            </div>
+          );
+        }
+
+        // Render the App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
